@@ -6,11 +6,13 @@ from pathlib import Path
 st.set_page_config(page_title="Pie Chart", page_icon="🥧")
 st.title("🥧 Interactive Pie Chart")
 
-DATA_PATH = Path("streamlit_CS/data/pie_demo.csv")
+# ✅ Corrected path (works both locally & on Streamlit Cloud)
+BASE_DIR = Path(__file__).resolve().parents[1]   # goes up from /pages to /streamlit_CS
+DATA_PATH = BASE_DIR / "data" / "pie_demo.csv"
 
 # Load data
 if not DATA_PATH.exists():
-    st.error("Missing data file: streamlit_CS/data/pie_demo.csv")
+    st.error(f"Missing data file: {DATA_PATH}")
     st.stop()
 
 df = pd.read_csv(DATA_PATH)
