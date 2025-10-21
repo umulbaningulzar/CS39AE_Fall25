@@ -8,7 +8,7 @@ st.title("🥧 Interactive Pie Chart")
 
 # ✅ Corrected path (works both locally & on Streamlit Cloud)
 BASE_DIR = Path(__file__).resolve().parents[1]   # goes up from /pages to /streamlit_CS
-DATA_PATH = BASE_DIR / "data" / "pie_demo.csv"
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "pie_demo.csv"
 
 # Load data
 if not DATA_PATH.exists():
