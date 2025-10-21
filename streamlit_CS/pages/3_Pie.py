@@ -6,23 +6,49 @@ from pathlib import Path
 st.set_page_config(page_title="Pie Chart", page_icon="🥧")
 st.title("🥧 Interactive Pie Chart")
 
-# ✅ Corrected path (works both locally & on Streamlit Cloud)
-BASE_DIR = Path(__file__).resolve().parents[1]   # goes up from /pages to /streamlit_CS
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "pie_demo.csv"
+# --- Locate CSV robustly ---
+here = Path(__file__).resolve()
+base_pages = here.parent                 # .../streamlit_CS/pages
+base_app   = base_pages.parent           # .../streamlit_CS
+repo_root  = base_app.parent             # .../<repo>
 
-# Load data
-if not DATA_PATH.exists():
-    st.error(f"Missing data file: {DATA_PATH}")
+candidates = [
+    base_app / "data" / "pie_demo.csv",                   # streamlit_CS/data/pie_demo.csv
+    Path.cwd() / "streamlit_CS" / "data" / "pie_demo.csv",
+    Path.cwd() / "data" / "pie_demo.csv",
+    repo_root / "streamlit_CS" / "data" / "pie_demo.csv",
+]
+
+DATA_PATH = None
+for p in candidates:
+    if p.exists():
+        DATA_PATH = p
+        break
+
+# last-resort search (handles odd working dirs)
+if DATA_PATH is None:
+    hits = list(Path.cwd().rglob("pie_demo.csv"))
+    if hits:
+        DATA_PATH = hits[0]
+
+if DATA_PATH is None or not DATA_PATH.exists():
+    st.error(
+        "Missing data file `pie_demo.csv`.\n\n"
+        "I looked in these locations:\n"
+        + "\n".join(f"• {p}" for p in candidates)
+        + "\n\nTip: ensure the file is committed at `streamlit_CS/data/pie_demo.csv`."
+    )
     st.stop()
 
+st.caption(f"Using data file: `{DATA_PATH}`")
+
+# --- Load & validate ---
 df = pd.read_csv(DATA_PATH)
-
-# Validate data
 if df.shape[1] < 2:
-    st.error("CSV must have at least two columns: a category and a numeric value.")
+    st.error("CSV needs two columns: a category and a numeric value.")
     st.stop()
 
-# Let the user choose columns
+# --- Pick columns ---
 cat_col = st.selectbox("Select category column:", df.columns, index=0)
 num_candidates = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
 if not num_candidates:
@@ -30,17 +56,20 @@ if not num_candidates:
     st.stop()
 val_col = st.selectbox("Select numeric column:", num_candidates, index=0)
 
-# Input for chart title
+# --- Title & options ---
 chart_title = st.text_input("Enter chart title:", value="How I Spend My Week")
-
-# Optional sort toggle
 sort_opt = st.checkbox("Sort slices descending", value=True)
+
+# --- Aggregate & sort ---
 agg = df.groupby(cat_col, as_index=False)[val_col].sum()
 if sort_opt:
     agg = agg.sort_values(val_col, ascending=False)
 
-# Create the pie chart
-fig = px.pie(agg, names=cat_col, values=val_col, hole=0.25, title=chart_title)
-st.plotly_chart(fig, use_container_width=True)
+# --- Plot (with percentage labels) ---
+fig = px.pie(
+    agg, names=cat_col, values=val_col, hole=0.25, title=chart_title
+)
+fig.update_traces(textposition="inside", texttemplate="%{label}<br>%{percent:.1%}")
 
-st.caption("💡 Tip: Edit the CSV file (streamlit_CS/data/pie_demo.csv) or change the title above, then refresh to see updates!")
+st.plotly_chart(fig, use_container_width=True)
+st.caption("Edit `streamlit_CS/data/pie_demo.csv` or the title above, then refresh to see updates.")
